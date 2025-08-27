@@ -1,32 +1,88 @@
-import * as THREE from 'three';
+window.onload = function(){
 
-const w = window.innerWidth;
-const h = window.innerHeight;
-const scene = new THREE.Scene();
+/*============== Creating a canvas ====================*/
+const canvas = document.getElementById("gl-canvas");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+const gl = canvas.getContext("webgl");
 
-const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 100);
-camera.position.z = 5;
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(w, h);
-document.body.appendChild(renderer.domElement);
-
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshStandardMaterial({
-    color: 0x00ff00
-});
-const cube = new THREE.Mesh(geometry, material);
-cube.scale.setScalar(2);
-scene.add(cube);
-
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
-scene.add(hemiLight);
-
-function animate() {
-    requestAnimationFrame(animate);
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
-    renderer.render(scene, camera);
+if (!gl) {
+    console.error("WebGL is not supported in this browser.");
+    return;
 }
-animate();
 
-renderer.render(scene, camera);
+/*======== Defining and storing the geometry ===========*/
+let vertices = [];
+
+generateTree(0, -.7, Math.PI / 2, 6, vertices); 
+
+// Create an empty buffer object
+const vertex_buffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+/*================ Shaders ====================*/
+// Vertex shader source code
+var vertCode =
+    'attribute vec3 coordinates;' +
+    'void main(void) {' +
+        ' gl_Position = vec4(coordinates, 1.0);' +
+    '}';
+
+// Create a vertex shader object    
+const vertShader = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vertShader, vertCode);
+gl.compileShader(vertShader);
+
+// Fragment shader source code
+const fragCode = `
+precision mediump float;
+void main(void) {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+}`;
+
+// Create fragment shader object
+const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+gl.shaderSource(fragShader, fragCode);
+gl.compileShader(fragShader);
+
+// Create a shader program object to store the combined shader program
+const shaderProgram = gl.createProgram();
+gl.attachShader(shaderProgram, vertShader);
+gl.attachShader(shaderProgram, fragShader);
+gl.linkProgram(shaderProgram);
+gl.useProgram(shaderProgram);
+
+/*======= Associating shaders to buffer objects =======*/
+gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+const coord = gl.getAttribLocation(shaderProgram, "coordinates");
+gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
+gl.enableVertexAttribArray(coord);
+
+/*========= Drawing the triangle ===========*/
+gl.clearColor(1, 1, 1, 1);
+gl.enable(gl.DEPTH_TEST);
+gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+gl.viewport(0, 0, canvas.width, canvas.height);
+gl.drawArrays(gl.LINES, 0, vertices.length / 3);
+
+// Recursive tree builder
+function generateTree(x1, y1, angle, depth, vertices) {
+    if (depth === 0) return;
+   
+    // Length shrinks each step
+    const length = 0.4 * Math.pow(0.7, (6 - depth));
+
+    // Endpoint of this branch
+    const x2 = x1 + length * Math.cos(angle);
+    const y2 = y1 + length * Math.sin(angle);
+
+    // Push line segment into vertices (x1,y1) → (x2,y2)
+    vertices.push(x1, y1, 0,  x2, y2, 0);
+
+    const branchAngle = Math.PI / 8;
+    generateTree(x2, y2, angle - branchAngle, depth - 1, vertices);
+    generateTree(x2, y2, angle + branchAngle, depth - 1, vertices);
+}
+}
