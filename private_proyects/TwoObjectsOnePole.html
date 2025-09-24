@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <canvas width="570" height="570" id="my_Canvas"></canvas>
+
+    <script>
+      main();
+      function main() {
+        var canvas = document.getElementById("my_Canvas");
+        gl = canvas.getContext("experimental-webgl");
+        if (gl == null) {
+          alert("Error. Aborting.....");
+          return;
+        }
+        var vertices = [
+          // Front face
+          0.0 + 1,
+          1.0,
+          0.0,
+          -1.0 + 1,
+          -1.0,
+          1.0,
+          1.0 + 1,
+          -1.0,
+          1.0,
+          // Right face
+          0.0 + 1,
+          1.0,
+          0.0,
+          1.0 + 1,
+          -1.0,
+          1.0,
+          1.0 + 1,
+          -1.0,
+          -1.0,
+          // Back face
+          0.0 + 1,
+          1.0,
+          0.0,
+          1.0 + 1,
+          -1.0,
+          -1.0,
+          -1.0 + 1,
+          -1.0,
+          -1.0,
+          // Left face
+          0.0 + 1,
+          1.0,
+          0.0,
+          -1.0 + 1,
+          -1.0,
+          -1.0,
+          -1.0 + 1,
+          -1.0,
+          1.0,
+          //bottom square
+          -1.0 + 1,
+          -1.0,
+          1.0,
+          1.0 + 1,
+          -1.0,
+          1.0,
+          1.0 + 1,
+          -1.0,
+          -1.0,
+          -1.0 + 1,
+          -1.0,
+          -1.0,
+        ];
+
+        //cube
+        var verticesCube = [
+          -1 - 1,
+          -1,
+          -1,
+          1 - 1,
+          -1,
+          -1,
+          1 - 1,
+          1,
+          -1,
+          -1 - 1,
+          1,
+          -1,
+          -1 - 1,
+          -1,
+          1,
+          1 - 1,
+          -1,
+          1,
+          1 - 1,
+          1,
+          1,
+          -1 - 1,
+          1,
+          1,
+          -1 - 1,
+          -1,
+          -1,
+          -1 - 1,
+          1,
+          -1,
+          -1 - 1,
+          1,
+          1,
+          -1 - 1,
+          -1,
+          1,
+          1 - 1,
+          -1,
+          -1,
+          1 - 1,
+          1,
+          -1,
+          1 - 1,
+          1,
+          1,
+          1 - 1,
+          -1,
+          1,
+          -1 - 1,
+          -1,
+          -1,
+          -1 - 1,
+          -1,
+          1,
+          1 - 1,
+          -1,
+          1,
+          1 - 1,
+          -1,
+          -1,
+          -1 - 1,
+          1,
+          -1,
+          -1 - 1,
+          1,
+          1,
+          1 - 1,
+          1,
+          1,
+          1 - 1,
+          1,
+          -1,
+        ];
+        //cilindro
+        var sides = 10;
+        var height = 3.0;
+        var stepTheta = (2 * Math.PI) / sides;
+        var verticesPerCap = 9 * sides;
+
+        var verticesCyl = [];
+        var colorsCyl = [];
+        var theta = 0;
+        var i = 0;
+
+        // Top Cap
+        for (; i < verticesPerCap; i += 9) {
+          verticesCyl[i] = 0.15 * Math.cos(theta);
+          colorsCyl[i] = 0.85;
+          verticesCyl[i + 1] = height;
+          colorsCyl[i + 1] = 0.85;
+          verticesCyl[i + 2] = 0.15 * Math.sin(theta);
+          colorsCyl[i + 2] = 0.85;
+          theta += stepTheta;
+
+          verticesCyl[i + 3] = 0.0;
+          colorsCyl[i + 3] = 0.85;
+          verticesCyl[i + 4] = height;
+          colorsCyl[i + 4] = 0.85;
+          verticesCyl[i + 5] = 0.0;
+          colorsCyl[i + 5] = 0.85;
+
+          verticesCyl[i + 6] = 0.15 * Math.cos(theta);
+          colorsCyl[i + 6] = 0.85;
+          verticesCyl[i + 7] = height;
+          colorsCyl[i + 7] = 0.85;
+          verticesCyl[i + 8] = 0.15 * Math.sin(theta);
+          colorsCyl[i + 8] = 0.85;
+        }
+
+        // Bottom Cap
+        theta = 0;
+        for (; i < verticesPerCap + verticesPerCap; i += 9) {
+          verticesCyl[i + 6] = 0.15 * Math.cos(theta);
+          verticesCyl[i + 7] = -height;
+          verticesCyl[i + 8] = 0.15 * Math.sin(theta);
+          theta += stepTheta;
+
+          verticesCyl[i + 3] = 0.0;
+          verticesCyl[i + 4] = -height;
+          verticesCyl[i + 5] = 0.0;
+
+          verticesCyl[i] = 0.15 * Math.cos(theta);
+          verticesCyl[i + 1] = -height;
+          verticesCyl[i + 2] = 0.15 * Math.sin(theta);
+        }
+
+        for (var j = 0; j < sides; ++j) {
+          for (var k = 0; k < 3; ++k, ++i) {
+            verticesCyl[i] = verticesCyl[0 + k + 9 * j];
+          }
+          for (var k = 0; k < 3; ++k, ++i) {
+            verticesCyl[i] = verticesCyl[6 + k + 9 * j];
+          }
+          for (var k = 0; k < 3; ++k, ++i) {
+            verticesCyl[i] = verticesCyl[verticesPerCap + k + 9 * j];
+          }
+
+          for (var k = 0; k < 3; ++k, ++i) {
+            verticesCyl[i] = verticesCyl[0 + k + 9 * j];
+          }
+          for (var k = 0; k < 3; ++k, ++i) {
+            verticesCyl[i] = verticesCyl[verticesPerCap + k + 9 * j];
+          }
+          for (var k = 0; k < 3; ++k, ++i) {
+            verticesCyl[i] = verticesCyl[verticesPerCap + 6 + k + 9 * j];
+          }
+        }
+
+        var indicesCyl = new Array(verticesCyl.length / 3);
+        for (i = 0; i < indicesCyl.length; ++i) indicesCyl[i] = i;
+
+        //
+        var colorsCube = [
+          5, 3, 7, 5, 3, 7, 5, 3, 7, 5, 3, 7, 1, 1, 3, 1, 1, 3, 1, 1, 3, 1, 1,
+          3, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+          0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
+          0, 1, 0,
+        ];
+
+        var colors = [
+          0.235, 0.0, 0.0, 0.235, 0.0, 0.0, 0.235, 0.0, 0.0, 0, 0.1, 0.5, 0,
+          0.1, 0.5, 0, 0.1, 0.5, 0.24, 0.34, 0.12, 0.24, 0.34, 0.12, 0.24, 0.34,
+          0.12, 1, 0.45, 0, 1, 0.45, 0, 1, 0.45, 0, 0.75, 0.64, 0.33, 0.75,
+          0.64, 0.33, 0.75, 0.64, 0.33, 0.75, 0.64, 0.33,
+        ];
+
+        var indices = [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 12, 14, 15,
+        ];
+        var indicesCube = [
+          0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14,
+          12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
+        ];
+
+        //===================
+        const positions = new Float32Array([
+          1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1,
+          -1, -1, -1, 1, -1, 1, 1, 1, 1, 1, 1, 1, -1, -1, 1, -1, -1, -1, -1, 1,
+          -1, -1, 1, -1, 1, -1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1,
+          -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1,
+        ]);
+        //const normals   = new Float32Array([1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1]);
+        //const texcoords = new Float32Array([1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1]);
+        const indicesObjects = new Uint16Array([
+          0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14,
+          12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
+        ]);
+        //
+        const positionBuffer = createBuffer(gl, positions);
+        const indicesBuffer = createBuffer(
+          gl,
+          indices,
+          gl.ELEMENT_ARRAY_BUFFER
+        );
+        //
+        const numObjects = 10;
+        const objectInfos = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+        // for (let i = 0; i < numObjects; ++i) {
+        //    const across = Math.sqrt(numObjects) | 0;
+        //    const x = (i % across - (across - 1) / 2) * 3;
+        //    const y = ((i / across | 0) - (across - 1) / 2) * 3;
+
+        //    objectInfos.push({
+        //       translation: [x, y, 0],
+        //    });
+        //}
+
+        //===================
+        var vertex_buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(vertices),
+          gl.STATIC_DRAW
+        );
+        //
+        var color_buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(colors),
+          gl.STATIC_DRAW
+        );
+        //
+        var index_buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+        gl.bufferData(
+          gl.ELEMENT_ARRAY_BUFFER,
+          new Uint16Array(indices),
+          gl.STATIC_DRAW
+        );
+        // Cube
+        var vertex_bufferCube = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_bufferCube);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(verticesCube),
+          gl.STATIC_DRAW
+        );
+        //
+        var color_bufferCube = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_bufferCube);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(colorsCube),
+          gl.STATIC_DRAW
+        );
+        //
+        var index_bufferCube = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_bufferCube);
+        gl.bufferData(
+          gl.ELEMENT_ARRAY_BUFFER,
+          new Uint16Array(indicesCube),
+          gl.STATIC_DRAW
+        );
+        //Cylinder
+        var vertex_bufferCyl = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_bufferCyl);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(verticesCyl),
+          gl.STATIC_DRAW
+        );
+        //
+        var color_bufferCyl = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_bufferCyl);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(colorsCyl),
+          gl.STATIC_DRAW
+        );
+        //
+        var index_bufferCyl = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_bufferCyl);
+        gl.bufferData(
+          gl.ELEMENT_ARRAY_BUFFER,
+          new Uint16Array(indicesCyl),
+          gl.STATIC_DRAW
+        );
+        //
+        var vertCode =
+          "attribute vec3 position;" +
+          "uniform mat4 Pmatrix;" +
+          "uniform mat4 Vmatrix;" +
+          "uniform mat4 Mmatrix;" +
+          "attribute vec3 color;" +
+          "varying vec3 vColor;" +
+          "void main(void) { " +
+          "gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);" +
+          "vColor = color;" +
+          "}";
+        var fragCode =
+          "precision mediump float;" +
+          "varying vec3 vColor;" +
+          "void main(void) {" +
+          "gl_FragColor = vec4(vColor, 1.);" +
+          "}";
+        var vertShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertShader, vertCode);
+        gl.compileShader(vertShader);
+        var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragShader, fragCode);
+        gl.compileShader(fragShader);
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertShader);
+        gl.attachShader(shaderProgram, fragShader);
+        gl.linkProgram(shaderProgram);
+        //matrices
+        var Pmatrix = gl.getUniformLocation(shaderProgram, "Pmatrix");
+        var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
+        var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
+        var proj_matrix = get_projection(
+          40,
+          canvas.width / canvas.height,
+          1,
+          100
+        );
+        var mov_matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        var view_matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        view_matrix[14] = view_matrix[14] - 5;
+        //matrices Cube
+        var PmatrixCube = gl.getUniformLocation(shaderProgram, "Pmatrix");
+        var VmatrixCube = gl.getUniformLocation(shaderProgram, "Vmatrix");
+        var MmatrixCube = gl.getUniformLocation(shaderProgram, "Mmatrix");
+        var proj_matrixCube = get_projection(
+          40,
+          canvas.width / canvas.height,
+          1,
+          100
+        );
+        var mov_matrixCube = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, -2, 1];
+        var view_matrixCube = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        view_matrixCube[14] = view_matrixCube[14] - 5;
+        //matrices Cylinder
+        var PmatrixCyl = gl.getUniformLocation(shaderProgram, "Pmatrix");
+        var VmatrixCyl = gl.getUniformLocation(shaderProgram, "Vmatrix");
+        var MmatrixCyl = gl.getUniformLocation(shaderProgram, "Mmatrix");
+        var proj_matrixCyl = get_projection(
+          40,
+          canvas.width / canvas.height,
+          1,
+          100
+        );
+        var mov_matrixCyl = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        var view_matrixCyl = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        view_matrixCyl[14] = view_matrixCyl[14] - 5;
+        //buffers
+        var positionCube, position, positionCyl;
+        var colorCube, color, colorCyl;
+
+        //buffers
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        position = gl.getAttribLocation(shaderProgram, "position");
+        gl.vertexAttribPointer(position, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(position);
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        color = gl.getAttribLocation(shaderProgram, "color");
+        gl.vertexAttribPointer(color, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(color);
+        gl.useProgram(shaderProgram);
+        //================Cube
+        //buffers
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_bufferCube);
+        position = gl.getAttribLocation(shaderProgram, "position");
+        gl.vertexAttribPointer(position, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(position);
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_bufferCube);
+        colorCube = gl.getAttribLocation(shaderProgram, "color");
+        gl.vertexAttribPointer(colorCube, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(colorCube);
+        gl.useProgram(shaderProgram);
+        //================Cylinder
+        //buffers
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        positionCyl = gl.getAttribLocation(shaderProgram, "position");
+        gl.vertexAttribPointer(positionCyl, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(positionCyl);
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        colorCyl = gl.getAttribLocation(shaderProgram, "color");
+        gl.vertexAttribPointer(colorCyl, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(colorCyl);
+        gl.useProgram(shaderProgram);
+        //animation
+        var time_old = 0;
+        var animate = function (time) {
+          gl.enable(gl.DEPTH_TEST);
+          gl.depthFunc(gl.LEQUAL);
+          gl.clearColor(0.5, 0.5, 0.5, 0.9);
+          gl.clearDepth(1.0);
+          gl.viewport(0.0, 0.0, canvas.width, canvas.height);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+          //
+          var dt = time - time_old;
+          rotateY(mov_matrix, dt * 0.002);
+          rotateX(mov_matrixCube, dt * 0.002);
+          trasladaX(mov_matrix, 2.0);
+          //rotateX(mov_matrix, dt*0.002);
+          time_old = time;
+          //================================== pyramid
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+          position = gl.getAttribLocation(shaderProgram, "position");
+          gl.vertexAttribPointer(position, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(position);
+          gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+          color = gl.getAttribLocation(shaderProgram, "color");
+          gl.vertexAttribPointer(color, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(color);
+          //
+          gl.uniformMatrix4fv(Pmatrix, false, proj_matrix);
+          gl.uniformMatrix4fv(Vmatrix, false, view_matrix);
+          gl.uniformMatrix4fv(Mmatrix, false, mov_matrix);
+          //gl.viewport(0,0,canvas.width,canvas.height);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+          gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+          //================================== Cube
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_bufferCube);
+          positionCube = gl.getAttribLocation(shaderProgram, "position");
+          gl.vertexAttribPointer(positionCube, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(positionCube);
+          gl.bindBuffer(gl.ARRAY_BUFFER, color_bufferCube);
+          colorCube = gl.getAttribLocation(shaderProgram, "color");
+          gl.vertexAttribPointer(colorCube, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(colorCube);
+          gl.useProgram(shaderProgram);
+          //rotateY(mov_matrixCube, dt*0.001);
+          //rotateX(mov_matrix, dt*0.002);
+          gl.uniformMatrix4fv(PmatrixCube, false, proj_matrixCube);
+          gl.uniformMatrix4fv(VmatrixCube, false, view_matrixCube);
+          gl.uniformMatrix4fv(MmatrixCube, false, mov_matrixCube);
+          //gl.viewport(0,0,canvas.width,canvas.height);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_bufferCube);
+          gl.drawElements(
+            gl.TRIANGLES,
+            indicesCube.length,
+            gl.UNSIGNED_SHORT,
+            0
+          );
+          //
+          //================================== Cylinder
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_bufferCyl);
+          positionCyl = gl.getAttribLocation(shaderProgram, "position");
+          gl.vertexAttribPointer(positionCyl, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(positionCyl);
+          gl.bindBuffer(gl.ARRAY_BUFFER, color_bufferCyl);
+          colorCyl = gl.getAttribLocation(shaderProgram, "color");
+          gl.vertexAttribPointer(colorCyl, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(colorCyl);
+          gl.useProgram(shaderProgram);
+          //rotateY(mov_matrixCube, dt*0.001);
+          //rotateX(mov_matrix, dt*0.002);
+          gl.uniformMatrix4fv(PmatrixCyl, false, proj_matrixCyl);
+          gl.uniformMatrix4fv(VmatrixCyl, false, view_matrixCyl);
+          mov_matrixCyl = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1];
+          gl.uniformMatrix4fv(MmatrixCyl, false, mov_matrixCyl);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_bufferCyl);
+          gl.drawElements(
+            gl.TRIANGLES,
+            indicesCyl.length,
+            gl.UNSIGNED_SHORT,
+            0
+          );
+          //
+          mov_matrixCyl = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 0, 0, 1];
+          gl.uniformMatrix4fv(MmatrixCyl, false, mov_matrixCyl);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_bufferCyl);
+          //gl.drawElements(gl.TRIANGLES, indicesCyl.length, gl.UNSIGNED_SHORT, 0);
+          //================================== Objects
+          //objectInfos.forEach(({translation}, ndx) => {
+          //const world = mat4.translation([1,1,0]);//.translation(translation);
+          //mat4.rotateX(world, time * 0.9 + ndx, world);
+          //mat4.rotateY(world, time + ndx, world);
+
+          //gl.uniformMatrix4fv(u_worldInverseTransposeLoc, false, mat4.transpose(mat4.inverse(world)));
+          //gl.uniformMatrix4fv(u_worldViewProjectionLoc, false, mat4.multiply(viewProjection, world));
+
+          //gl.drawElements(gl.TRIANGLES, 6 * 6, gl.UNSIGNED_SHORT, 0);
+          //});
+
+          //================================== Cylinder
+          window.requestAnimationFrame(animate);
+        };
+        animate(0);
+      }
+      //======================================================
+      function get_projection(angle, a, zMin, zMax) {
+        var ang = Math.tan((angle * 0.5 * Math.PI) / 180); //angle*.5
+        return [
+          0.5 / ang,
+          0,
+          0,
+          0,
+          0,
+          (0.5 * a) / ang,
+          0,
+          0,
+          0,
+          0,
+          -(zMax + zMin) / (zMax - zMin),
+          -1,
+          0,
+          0,
+          (-2 * zMax * zMin) / (zMax - zMin),
+          0,
+        ];
+      }
+      //======================================================
+      function trasladaX(m, desplazaX) {
+        //var c = Math.cos(adesplazaX);
+        //var s = Math.sin(desplazaX);
+        //var mv0 = m[0], mv4 = m[4], mv8 = m[8];
+        //m[0]=m[0]+0;  m[1]=m[1]+0;  m[2]=m[2]+0; m[3]=m[3]+0;
+        //m[4]=m[4]+0;  m[5]=m[5]+0;  m[6]=m[6]+0; m[7]=m[7]+0;
+        //m[8]=m[8]+0;  m[9]=m[9]+0;  m[10]=m[10]+0; m[11]=m[11]+0;
+        //m[12]=desplazaX+0; m[13]=m[13]+0; m[14]=m[14]+0; m[15]=m[15]+0;
+        m[12] = desplazaX;
+      }
+      //======================================================
+      function rotateY(m, angle) {
+        var c = Math.cos(angle);
+        var s = Math.sin(angle);
+        var mv0 = m[0],
+          mv4 = m[4],
+          mv8 = m[8];
+
+        m[0] = c * m[0] + s * m[2];
+        m[4] = c * m[4] + s * m[6];
+        m[8] = c * m[8] + s * m[10];
+
+        m[2] = c * m[2] - s * mv0;
+        m[6] = c * m[6] - s * mv4;
+        m[10] = c * m[10] - s * mv8;
+      }
+      //======================================================
+      function rotateX(m, angle) {
+        var c = Math.cos(angle);
+        var s = Math.sin(angle);
+        var mv1 = m[1],
+          mv5 = m[5],
+          mv9 = m[9];
+
+        m[1] = m[1] * c - m[2] * s;
+        m[5] = m[5] * c - m[6] * s;
+        m[9] = m[9] * c - m[10] * s;
+
+        m[2] = m[2] * c + mv1 * s;
+        m[6] = m[6] * c + mv5 * s;
+        m[10] = m[10] * c + mv9 * s;
+      }
+      //======================================================
+      function updateMatrix() {}
+      //======================================================
+      function sub(a, b) {
+        return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+      }
+      function cross(a, b) {
+        return [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ];
+      }
+      //======================================================
+      function normalize(a) {
+        var length = a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
+        return [a[0] / length, a[1] / length, a[2] / length];
+      }
+      //======================================================
+      function createBuffer(gl, data, type = gl.ARRAY_BUFFER) {
+        const buf = gl.createBuffer();
+        gl.bindBuffer(type, buf);
+        gl.bufferData(type, data, gl.STATIC_DRAW);
+        return buf;
+      }
+      //======================================================
+    </script>
+  </body>
+</html>
