@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <canvas width="570" height="570" id="my_Canvas"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script>
+      var gl, program;
+      var numTireIndices, numPlaneIndices;
+
+      // === Camera orbit variables ===
+      var orbitRadius = 12.0;
+      var cameraAngleY = 0.0;
+      var cameraAngleX = 0.3;
+      var cameraPosition = vec3.create();
+      var targetPosition = vec3.fromValues(0, 0, 0);
+
+      var upVector = vec3.fromValues(0, 1, 0);
+
+      var sensitivity = 0.005;
+      
+      // === Tire orbit variables ===
+      var cylOrbitRadius = 5.0;
+      var tireRadius = 0.6;
+      var cylOrbitSpeed = 1.0;
+      var cylOrbitAngle = 0.0;
+      var tireSpinAngle = 0.0;
+
+      // === Mouse control ===
+      var isDragging = false;
+      var lastMouseX = 0;
+      var lastMouseY = 0;
+
+      // === Matrices ===
+      var modelMatrix = mat4.create();
+      var viewMatrix = mat4.create();
+      var projectionMatrix = mat4.create();
+      var modelViewProjectionMatrix = mat4.create();
+      var u_modelViewProjectionMatrix, u_sampler;
+
+      var buffers = {};
+      var textures = {};
+
+      main();
+
+      function main() {
+        var canvas = document.getElementById("my_Canvas");
+        gl = canvas.getContext("webgl");
+        if (!gl) { alert("WebGL not supported"); return; }
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+        // === Geometry con UV ===
+        var { vertices: tireVerts, uvs: tireUVs, indices: tireIndices } = createTorusGeometry(tireRadius, 0.2, 40, 20);
+        numTireIndices = tireIndices.length;
+        var { vertices: planeVerts, uvs: planeUVs, indices: planeIndices } = createPlaneGeometry(40);
+        numPlaneIndices = planeIndices.length;
+
+        // === Shaders con texturas ===
+        var vsSource = `
+          attribute vec4 a_position;
+          attribute vec2 a_texcoord;
+          varying vec2 v_texcoord;
+          uniform mat4 u_modelViewProjectionMatrix;
+          void main() {
+            v_texcoord = a_texcoord;
+            gl_Position = u_modelViewProjectionMatrix * a_position;
+          }
+        `;
+        var fsSource = `
+          precision mediump float;
+          varying vec2 v_texcoord;
+          uniform sampler2D u_sampler;
+          void main() {
+            gl_FragColor = texture2D(u_sampler, v_texcoord);
+          }
+        `;
+        var vs = createShader(gl.VERTEX_SHADER, vsSource);
+        var fs = createShader(gl.FRAGMENT_SHADER, fsSource);
+        program = createProgram(vs, fs);
+        gl.useProgram(program);
+
+        // === Buffers ===
+        setupBuffer("tire", tireVerts, tireUVs, tireIndices);
+        setupBuffer("plane", planeVerts, planeUVs, planeIndices);
+
+        // === Uniforms ===
+        u_modelViewProjectionMatrix = gl.getUniformLocation(program, "u_modelViewProjectionMatrix");
+        u_sampler = gl.getUniformLocation(program, "u_sampler");
+
+        // === Load Textures ===
+        loadTexture("tire", "tire.jpg"); 
+        loadTexture("plane", "grass.jpg"); 
+
+        gl.enable(gl.DEPTH_TEST);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+        // === Mouse ===
+        canvas.addEventListener("mousedown", e => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+        canvas.addEventListener("mouseup", () => isDragging = false);
+        canvas.addEventListener("mousemove", e => {
+          if (!isDragging) return;
+          var dx = e.clientX - lastMouseX;
+          var dy = e.clientY - lastMouseY;
+          cameraAngleY += dx * sensitivity;
+          cameraAngleX -= dy * sensitivity
+          lastMouseX = e.clientX;
+          lastMouseY = e.clientY;
+        
+        });
+
+        requestAnimationFrame(render);
+      }
+
+      function render(now) {
+        now *= 0.001;
+        cylOrbitAngle = now * cylOrbitSpeed;
+        tireSpinAngle = (cylOrbitAngle * cylOrbitRadius) / tireRadius;
+
+        // === Camera ===
+        var camX = orbitRadius * Math.sin(cameraAngleY) * Math.cos(cameraAngleX);
+        var camY = orbitRadius * Math.sin(cameraAngleX);
+        var camZ = orbitRadius * Math.cos(cameraAngleY) * Math.cos(cameraAngleX);
+        vec3.set(cameraPosition, camX, camY, camZ);
+
+        var currentUp = vec3.clone(upVector);
+        var angleXWrapped = cameraAngleX % (Math.PI * 2);
+        if (angleXWrapped > Math.PI / 2 || angleXWrapped < -Math.PI / 2) {
+            vec3.set(currentUp, 0, -1, 0); 
+        }
+
+        mat4.lookAt(viewMatrix, cameraPosition, targetPosition, currentUp); 
+        mat4.perspective(projectionMatrix, Math.PI/4, gl.canvas.width/gl.canvas.height, 0.1, 100);
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        // === Draw plane ===
+        mat4.identity(modelMatrix);
+        mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+        mat4.multiply(modelViewProjectionMatrix, modelViewProjectionMatrix, modelMatrix);
+        gl.uniformMatrix4fv(u_modelViewProjectionMatrix, false, modelViewProjectionMatrix);
+        bindBuffer("plane");
+        bindTexture("plane");
+        gl.drawElements(gl.TRIANGLES, numPlaneIndices, gl.UNSIGNED_SHORT, 0);
+
+        // === Draw tire ===
+        var x = cylOrbitRadius * Math.cos(cylOrbitAngle);
+        var z = cylOrbitRadius * Math.sin(cylOrbitAngle);
+        mat4.identity(modelMatrix);
+        mat4.translate(modelMatrix, modelMatrix, [x, tireRadius, z]);
+        mat4.rotateY(modelMatrix, modelMatrix, -cylOrbitAngle + Math.PI);
+        mat4.rotateZ(modelMatrix, modelMatrix, Math.PI / 2);
+        mat4.rotateY(modelMatrix, modelMatrix, -tireSpinAngle);
+        mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+        mat4.multiply(modelViewProjectionMatrix, modelViewProjectionMatrix, modelMatrix);
+        gl.uniformMatrix4fv(u_modelViewProjectionMatrix, false, modelViewProjectionMatrix);
+        bindBuffer("tire");
+        bindTexture("tire");
+        gl.drawElements(gl.TRIANGLES, numTireIndices, gl.UNSIGNED_SHORT, 0);
+
+        requestAnimationFrame(render);
+      }
+
+      // === Helpers ===
+      function setupBuffer(name, vertices, uvs, indices) {
+        var vao = {};
+        vao.positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vao.positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        vao.uvBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vao.uvBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
+
+        vao.indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vao.indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+        buffers[name] = vao;
+      }
+
+      function bindBuffer(name) {
+        var vao = buffers[name];
+        var posAttrib = gl.getAttribLocation(program, "a_position");
+        gl.bindBuffer(gl.ARRAY_BUFFER, vao.positionBuffer);
+        gl.enableVertexAttribArray(posAttrib);
+        gl.vertexAttribPointer(posAttrib, 3, gl.FLOAT, false, 0, 0);
+
+        var texAttrib = gl.getAttribLocation(program, "a_texcoord");
+        gl.bindBuffer(gl.ARRAY_BUFFER, vao.uvBuffer);
+        gl.enableVertexAttribArray(texAttrib);
+        gl.vertexAttribPointer(texAttrib, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vao.indexBuffer);
+      }
+
+      function loadTexture(name, url) {
+        var texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        const pixel = new Uint8Array([0, 0, 255, 255]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0,
+                      gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+        var image = new Image();
+        image.src = url;
+        image.onload = function() {
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
+                        gl.UNSIGNED_BYTE, image);
+          if ((image.width & (image.width - 1)) === 0 &&
+              (image.height & (image.height - 1)) === 0) {
+            gl.generateMipmap(gl.TEXTURE_2D);
+          } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          }
+        };
+        textures[name] = texture;
+      }
+
+      function bindTexture(name) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, textures[name]);
+        gl.uniform1i(u_sampler, 0);
+      }
+
+      function createShader(type, source) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          console.error("Shader compile error:", gl.getShaderInfoLog(shader));
+          return null;
+        }
+        return shader;
+      }
+
+      function createProgram(vs, fs) {
+        var program = gl.createProgram();
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          console.error("Program link error:", gl.getProgramInfoLog(program));
+          return null;
+        }
+        return program;
+      }
+
+      // === Geometry con UV ===
+      function createTorusGeometry(outerRadius, tubeRadius, radialSegments, tubularSegments) {
+        var vertices = [], uvs = [], indices = [];
+        for (var j = 0; j <= tubularSegments; j++) {
+          for (var i = 0; i <= radialSegments; i++) {
+            var u = i / radialSegments * Math.PI * 2;
+            var v = j / tubularSegments * Math.PI * 2;
+            var x = (outerRadius + tubeRadius * Math.cos(v)) * Math.cos(u);
+            var y = tubeRadius * Math.sin(v);
+            var z = (outerRadius + tubeRadius * Math.cos(v)) * Math.sin(u);
+            vertices.push(x, y, z);
+            uvs.push(i / radialSegments, j / tubularSegments);
+          }
+        }
+        for (var j = 1; j <= tubularSegments; j++) {
+          for (var i = 1; i <= radialSegments; i++) {
+            var a = (radialSegments+1) * j + i - 1;
+            var b = (radialSegments+1) * (j-1) + i - 1;
+            var c = (radialSegments+1) * (j-1) + i;
+            var d = (radialSegments+1) * j + i;
+            indices.push(a,b,d);
+            indices.push(b,c,d);
+          }
+        }
+        return { vertices, uvs, indices };
+      }
+
+      function createPlaneGeometry(size) {
+        var half = size / 2;
+        var vertices = [
+          -half, -0.2, -half,
+           half, -0.2, -half,
+           half, -0.2,  half,
+          -half, -0.2,  half,
+        ];
+        var uvs = [
+          0, 0,
+          1, 0,
+          1, 1,
+          0, 1,
+        ];
+        var indices = [0,1,2, 0,2,3];
+        return { vertices, uvs, indices };
+      }
+    </script>
+  </body>
+</html>
