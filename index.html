@@ -104,6 +104,17 @@ function main() {
     return swapped; // Return true if a swap happened
   }
 
+  function generateRandomScales(count, min, max) {
+      const s = [];
+      for (let i = 0; i < count; i++) {
+          // Math.random() gives [0, 1). Scale and shift to get [min, max).
+          const scale = Math.random() * (max - min) + min;
+          // Use two decimal places for clean values
+          s.push(parseFloat(scale.toFixed(2))); 
+      }
+      return s;
+  }
+
   // setup GLSL programs
   // compiles shaders, links program
   const program = webglUtils.createProgramFromScripts(
@@ -134,7 +145,8 @@ function main() {
   const numVertices = 12;
 
   // setup matrixes, one per instance
-  const scales = [1.1, 0.8, 0.5, 0.2, 1];
+   const numInstances = 5;
+  const scales = generateRandomScales(numInstances, 0.3, 1.2);
   const colors = [
     [1, 0, 0, 1], // red
     [0, 1, 0, 1], // green
@@ -142,7 +154,7 @@ function main() {
     [1, 0, 1, 1], // magenta
     [0, 1, 1, 1]  // cyan
 ];
-  const numInstances = scales.length;
+ 
 
   // make a typed array with one view per matrix
   const matrixData = new Float32Array(numInstances * 16);
