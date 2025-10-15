@@ -27,12 +27,12 @@ function init() {
 
   // === Load Letter A (JSON) ===
   const geometryLoader = new THREE.BufferGeometryLoader();
-  geometryLoader.load('/models/A.json', (geometry) => {
+  geometryLoader.load('models/A.json', (geometry) => {
     geometry.computeVertexNormals();
     geometry.computeBoundingBox();
   const textureLoader = new THREE.TextureLoader();
 const texture = textureLoader.load(
-    '/textures/texture.jpg',
+    'textures/texture.jpg',
 );
 
 texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
