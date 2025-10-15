@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
+import { GUI } from 'https://cdn.skypack.dev/lil-gui';
 import { createScene } from './scene.js';
 
 let scene, camera, renderer, letter, clock, pointLight;
@@ -56,6 +57,18 @@ texture.repeat.set(1, 1);
   scene.add(letter);
 });
 
+  // === GUI (Light Controls) ===
+  const gui = new GUI();
+  const lightFolder = gui.addFolder('Controles de Luz');
+  lightFolder.add(pointLight, 'intensity', 0, 10, 0.1).name('Intensidad');
+  pointLight.intensity = 2;
+  lightFolder
+    .addColor({ color: pointLight.color.getHex() }, 'color')
+    .name('Color')
+    .onChange((value) => pointLight.color.set(value));
+  lightFolder.open();
+
+  window.addEventListener('resize', onWindowResize);
 }
 
 function onWindowResize() {
