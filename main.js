@@ -1,6 +1,6 @@
-import * as THREE from 'three'; 
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import GUI from 'lil-gui';
+import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/OrbitControls.js';
+import GUI from 'https://cdn.skypack.dev/lil-gui';
 import { CameraMovement } from './camara.js';
 
 const container = document.getElementById('app') || document.body;
